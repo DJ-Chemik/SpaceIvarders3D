@@ -1,2 +1,2 @@
 # SpaceIvarders3D
-Game maked in C++ with OpenGL libraries
+Game made in C++ with OpenGL libraries
