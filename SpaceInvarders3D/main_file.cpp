@@ -14,6 +14,35 @@
 #include "myCube.h"
 #include "myTeapot.h"
 
+class Laser {
+    public:
+        float moveZ;
+        glm::mat4 shipModelMatrix;
+        void draw(ShaderProgram *sp);
+};
+
+void Laser::draw(ShaderProgram *sp) {
+    glm::mat4 Ml = glm::translate(shipModelMatrix, glm::vec3(0.0f, 0.0f, moveZ));
+    Ml = glm::scale(Ml, glm::vec3(0.1f, 0.1f, 2.5f));
+
+    glUniformMatrix4fv(sp->u("M"),1,false,glm::value_ptr(Ml));
+
+    glEnableVertexAttribArray(sp->a("vertex"));  //WĹ‚Ä…cz przesyĹ‚anie danych do atrybutu vertex
+    glVertexAttribPointer(sp->a("vertex"),4,GL_FLOAT,false,0,myCubeVertices); //WskaĹĽ tablicÄ™ z danymi dla atrybutu vertex
+
+    glEnableVertexAttribArray(sp->a("normal"));  //WĹ‚Ä…cz przesyĹ‚anie danych do atrybutu normal
+    glVertexAttribPointer(sp->a("normal"),4,GL_FLOAT,false,0,myCubeVertexNormals); //WskaĹĽ tablicÄ™ z danymi dla atrybutu normal
+
+    glEnableVertexAttribArray(sp->a("texCoord0"));  //WĹ‚Ä…cz przesyĹ‚anie danych do atrybutu texCoord0
+    glVertexAttribPointer(sp->a("texCoord0"),2,GL_FLOAT,false,0,myCubeTexCoords); //WskaĹĽ tablicÄ™ z danymi dla atrybutu texCoord0
+
+    glDrawArrays(GL_TRIANGLES,0,myCubeVertexCount); //Narysuj obiekt
+
+    glDisableVertexAttribArray(sp->a("vertex"));  //WyĹ‚Ä…cz przesyĹ‚anie danych do atrybutu vertex
+    glDisableVertexAttribArray(sp->a("normal"));  //WyĹ‚Ä…cz przesyĹ‚anie danych do atrybutu normal
+    glDisableVertexAttribArray(sp->a("texCoord0"));  //WyĹ‚Ä…cz przesyĹ‚anie danych do atrybutu texCoord0
+}
+
 //klasa do rysowania pojedynczego wielokata
 class Polygon {
     public:
@@ -73,6 +102,15 @@ Model spaceship;
 GLuint tex0;
 GLuint tex1;
 
+std::vector<Laser> lasers;
+glm::mat4 currentShipMatrix;
+
+void addLaser() {
+    Laser laser;
+    laser.moveZ = -7.0f;
+    laser.shipModelMatrix = currentShipMatrix;
+    lasers.push_back(laser);
+}
 
 //Procedura obsługi błędów
 void error_callback(int error, const char* description) {
@@ -86,10 +124,10 @@ void keyCallback(GLFWwindow* window,int key,int scancode,int action,int mods) {
         if (key==GLFW_KEY_RIGHT) speed_x=PI/2;
         if (key==GLFW_KEY_UP) speed_y=PI/2;
         if (key==GLFW_KEY_DOWN) speed_y=-PI/2;
-        if (key==GLFW_KEY_D) speed_moveX=-0.1;
-        if (key==GLFW_KEY_A) speed_moveX=0.1;
-        if (key==GLFW_KEY_W) speed_moveY=0.1;
-        if (key==GLFW_KEY_S) speed_moveY=-0.1;
+        if (key==GLFW_KEY_D) speed_moveX=-5;
+        if (key==GLFW_KEY_A) speed_moveX=5;
+        if (key==GLFW_KEY_W) speed_moveY=5;
+        if (key==GLFW_KEY_S) speed_moveY=-5;
     }
     if (action==GLFW_RELEASE) {
         if (key==GLFW_KEY_LEFT) speed_x=0;
@@ -100,6 +138,7 @@ void keyCallback(GLFWwindow* window,int key,int scancode,int action,int mods) {
         if (key==GLFW_KEY_A) speed_moveX=0;
         if (key==GLFW_KEY_W) speed_moveY=0;
         if (key==GLFW_KEY_S) speed_moveY=0;
+        if (key==GLFW_KEY_SPACE) addLaser();
     }
 }
 
@@ -281,6 +320,8 @@ void drawScene(GLFWwindow* window,float angle_x,float angle_y, float moveX, floa
     M=glm::translate(M,glm::vec3(0.0f,moveY,0.0f));
 	M=glm::rotate(M,angle_y,glm::vec3(1.0f,0.0f,0.0f)); //Wylicz macierz modelu
 	M=glm::rotate(M,angle_x,glm::vec3(0.0f,1.0f,0.0f)); //Wylicz macierz modelu
+	M=glm::scale(M, glm::vec3(0.15f, 0.15f, 0.15f));
+	currentShipMatrix = M;
 
 	//Kostka
 	/*float *verts=myCubeVertices;
@@ -310,6 +351,10 @@ void drawScene(GLFWwindow* window,float angle_x,float angle_y, float moveX, floa
     glBindTexture(GL_TEXTURE_2D,tex1);
 
     spaceship.draw(sp);
+
+    for(int i=0; i<lasers.size(); i++) {
+        lasers[i].draw(sp);
+    }
 
     /*glEnableVertexAttribArray(sp->a("vertex"));  //Włącz przesyłanie danych do atrybutu vertex
     glVertexAttribPointer(sp->a("vertex"),4,GL_FLOAT,false,0,verts); //Wskaż tablicę z danymi dla atrybutu vertex
@@ -341,8 +386,12 @@ void petlaGlowna(GLFWwindow* window)
 	{
         angle_x+=speed_x*glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
         angle_y+=speed_y*glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
-        moveX+=speed_moveX;
-        moveY+=speed_moveY;
+        moveX+=speed_moveX*glfwGetTime();
+        moveY+=speed_moveY*glfwGetTime();
+        if(moveX > 2) moveX = 2;
+        if(moveX < -2) moveX = -2;
+        if(moveY > 2) moveY = 2;
+        if(moveY < -2) moveY = -2;
         glfwSetTime(0); //Zeruj timer
 		drawScene(window,angle_x,angle_y, moveX, moveY); //Wykonaj procedurę rysującą
 		glfwPollEvents(); //Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
