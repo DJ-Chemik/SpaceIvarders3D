@@ -9,11 +9,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctime>
+#include <iostream>
 #include "constants.h"
 #include "lodepng.h"
 #include "shaderprogram.h"
 #include "myCube.h"
 #include "myTeapot.h"
+
+using namespace std;
 
 //klasa do rysowania pojedynczego wielokata
 class Polygon {
@@ -101,7 +104,15 @@ class Enemy{
         float shipDirectionMax=0.005f;
         glm::mat4 enemyModelMatrix;
         void draw(ShaderProgram *sp);
+
+
         void coming();
+        const static float directionChange=0.005f;
+        int direction = (rand()%3)+0; //0 - X , 1-Y, 2-XY
+        int sign = (rand()%4)+0; //0,2-plus, 1,3-minus
+
+
+
 
 };
 
@@ -118,21 +129,49 @@ void Enemy::draw(ShaderProgram *sp){
 }
 
 void Enemy::coming(){
-    int a = rand()%2;
-    int b = rand()%2;
 
-    if (a==1 && b!=1)
+    if(direction==0)
     {
-        enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(0.005f, 0.0f, 0.0f));
+        if(sign==0 || sign==2)
+        {
+            enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(directionChange, 0.0f, 0.0f));
+        }
+        else if(sign==1 || sign==3)
+        {
+            enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(-directionChange, 0.0f, 0.0f));
+        }
     }
-    if (b==1 && a!=1)
+    else if(direction==1)
     {
-        enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(0.0f, 0.005f, 0.0f));
+        if(sign==0 || sign==2)
+        {
+            enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(0.0f, directionChange, 0.0f));
+        }
+        else if(sign==1 || sign==3)
+        {
+            enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(0.0f, -directionChange, 0.0f));
+        }
     }
-    if (b==1 && a!=1)
+    else if(direction==2)
     {
-        enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(0.005f, 0.005f, 0.0f));
+        if(sign==0)
+        {
+            enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(directionChange, directionChange, 0.0f));
+        }
+        else if(sign==1)
+        {
+            enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(directionChange, -directionChange, 0.0f));
+        }
+        else if(sign==2)
+        {
+            enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(-directionChange, directionChange, 0.0f));
+        }
+        else if(sign==3)
+        {
+            enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(-directionChange, -directionChange, 0.0f));
+        }
     }
+
 
 
     moveZ-=shipSpeed;
@@ -154,6 +193,7 @@ Model Enemy::model;
 //Uchwyty na tekstury
 GLuint tex0;
 GLuint tex1;
+GLuint tex2;
 
 std::vector<Laser> lasers;
 std::vector<Enemy> enemies;
@@ -258,8 +298,9 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 	sp=new ShaderProgram("vertex.glsl",NULL,"fragment.glsl");
 
-    tex0=readTexture("metal.png");
-    tex1=readTexture("sky.png");
+    tex0=readTexture("statek.png");
+    tex1=readTexture("laser.png");
+    tex2=readTexture("statek2.png");
 
     spaceship.loadOBJ("prometheus.obj");
     Enemy::model.loadOBJ("ufo.obj");
@@ -271,6 +312,7 @@ void freeOpenGLProgram(GLFWwindow* window) {
     //************Tutaj umieszczaj kod, który należy wykonać po zakończeniu pętli głównej************
     glDeleteTextures(1,&tex0);
     glDeleteTextures(1,&tex1);
+    glDeleteTextures(1,&tex2);
     delete sp;
 }
 
@@ -409,16 +451,20 @@ void drawScene(GLFWwindow* window,float angle_x,float angle_y, float moveX, floa
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D,tex0);
 
-    glUniform1i(sp->u("textureMap1"),1);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D,tex1);
-
     spaceship.draw(sp);
+
+    glUniform1i(sp->u("textureMap0"),0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D,tex1);
 
     for(int i=0; i<lasers.size(); i++) {
         lasers[i].wystrzelenie();
         lasers[i].draw(sp);
     }
+
+    glUniform1i(sp->u("textureMap0"),0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D,tex2);
 
      for(int i=0; i<enemies.size(); i++) {
         enemies[i].coming();
