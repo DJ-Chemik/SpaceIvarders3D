@@ -8,40 +8,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctime>
 #include "constants.h"
 #include "lodepng.h"
 #include "shaderprogram.h"
 #include "myCube.h"
 #include "myTeapot.h"
-
-class Laser {
-    public:
-        float moveZ;
-        glm::mat4 shipModelMatrix;
-        void draw(ShaderProgram *sp);
-};
-
-void Laser::draw(ShaderProgram *sp) {
-    glm::mat4 Ml = glm::translate(shipModelMatrix, glm::vec3(0.0f, 0.0f, moveZ));
-    Ml = glm::scale(Ml, glm::vec3(0.1f, 0.1f, 2.5f));
-
-    glUniformMatrix4fv(sp->u("M"),1,false,glm::value_ptr(Ml));
-
-    glEnableVertexAttribArray(sp->a("vertex"));  //WĹ‚Ä…cz przesyĹ‚anie danych do atrybutu vertex
-    glVertexAttribPointer(sp->a("vertex"),4,GL_FLOAT,false,0,myCubeVertices); //WskaĹĽ tablicÄ™ z danymi dla atrybutu vertex
-
-    glEnableVertexAttribArray(sp->a("normal"));  //WĹ‚Ä…cz przesyĹ‚anie danych do atrybutu normal
-    glVertexAttribPointer(sp->a("normal"),4,GL_FLOAT,false,0,myCubeVertexNormals); //WskaĹĽ tablicÄ™ z danymi dla atrybutu normal
-
-    glEnableVertexAttribArray(sp->a("texCoord0"));  //WĹ‚Ä…cz przesyĹ‚anie danych do atrybutu texCoord0
-    glVertexAttribPointer(sp->a("texCoord0"),2,GL_FLOAT,false,0,myCubeTexCoords); //WskaĹĽ tablicÄ™ z danymi dla atrybutu texCoord0
-
-    glDrawArrays(GL_TRIANGLES,0,myCubeVertexCount); //Narysuj obiekt
-
-    glDisableVertexAttribArray(sp->a("vertex"));  //WyĹ‚Ä…cz przesyĹ‚anie danych do atrybutu vertex
-    glDisableVertexAttribArray(sp->a("normal"));  //WyĹ‚Ä…cz przesyĹ‚anie danych do atrybutu normal
-    glDisableVertexAttribArray(sp->a("texCoord0"));  //WyĹ‚Ä…cz przesyĹ‚anie danych do atrybutu texCoord0
-}
 
 //klasa do rysowania pojedynczego wielokata
 class Polygon {
@@ -85,6 +57,86 @@ class Model {
         void loadGroup(FILE* file);
 };
 
+class Laser {
+    public:
+        float moveZ;
+        float bulletSpeed = 5.0f;
+        glm::mat4 shipModelMatrix;
+        void draw(ShaderProgram *sp);
+        void wystrzelenie();
+};
+
+void Laser::draw(ShaderProgram *sp) {
+    glm::mat4 Ml = glm::translate(shipModelMatrix, glm::vec3(0.0f, 0.0f, moveZ));
+    Ml = glm::scale(Ml, glm::vec3(0.1f, 0.1f, 2.5f));
+
+    glUniformMatrix4fv(sp->u("M"),1,false,glm::value_ptr(Ml));
+
+    glEnableVertexAttribArray(sp->a("vertex"));  //WĹ‚Ä…cz przesyĹ‚anie danych do atrybutu vertex
+    glVertexAttribPointer(sp->a("vertex"),4,GL_FLOAT,false,0,myCubeVertices); //WskaĹĽ tablicÄ™ z danymi dla atrybutu vertex
+
+    glEnableVertexAttribArray(sp->a("normal"));  //WĹ‚Ä…cz przesyĹ‚anie danych do atrybutu normal
+    glVertexAttribPointer(sp->a("normal"),4,GL_FLOAT,false,0,myCubeVertexNormals); //WskaĹĽ tablicÄ™ z danymi dla atrybutu normal
+
+    glEnableVertexAttribArray(sp->a("texCoord0"));  //WĹ‚Ä…cz przesyĹ‚anie danych do atrybutu texCoord0
+    glVertexAttribPointer(sp->a("texCoord0"),2,GL_FLOAT,false,0,myCubeTexCoords); //WskaĹĽ tablicÄ™ z danymi dla atrybutu texCoord0
+
+    glDrawArrays(GL_TRIANGLES,0,myCubeVertexCount); //Narysuj obiekt
+
+    glDisableVertexAttribArray(sp->a("vertex"));  //WyĹ‚Ä…cz przesyĹ‚anie danych do atrybutu vertex
+    glDisableVertexAttribArray(sp->a("normal"));  //WyĹ‚Ä…cz przesyĹ‚anie danych do atrybutu normal
+    glDisableVertexAttribArray(sp->a("texCoord0"));  //WyĹ‚Ä…cz przesyĹ‚anie danych do atrybutu texCoord0
+}
+
+void Laser::wystrzelenie(){
+    moveZ-=bulletSpeed;
+
+}
+
+class Enemy{
+    public:
+        static Model model;
+        float moveZ;
+        float shipSpeed = 0.05f;
+        float shipDirectionMax=0.005f;
+        glm::mat4 enemyModelMatrix;
+        void draw(ShaderProgram *sp);
+        void coming();
+
+};
+
+void Enemy::draw(ShaderProgram *sp){
+    glm::mat4 Menemy = glm::translate(enemyModelMatrix, glm::vec3(0.0f, 0.0f, moveZ));
+    Menemy = glm::rotate(Menemy,-PI*0.15f,glm::vec3(1.0f,0.0f,0.0f));
+    Menemy = glm::rotate(Menemy,-PI/2,glm::vec3(0.0f,1.0f,0.0f));
+    Menemy = glm::rotate(Menemy,-PI/2,glm::vec3(1.0f,0.0f,0.0f));
+    Menemy = glm::scale(Menemy, glm::vec3(0.0005f, 0.0005f, 0.0005f));
+
+    glUniformMatrix4fv(sp->u("M"),1,false,glm::value_ptr(Menemy));
+
+    model.draw(sp);
+}
+
+void Enemy::coming(){
+    int a = rand()%2;
+    int b = rand()%2;
+
+    if (a==1 && b!=1)
+    {
+        enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(0.005f, 0.0f, 0.0f));
+    }
+    if (b==1 && a!=1)
+    {
+        enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(0.0f, 0.005f, 0.0f));
+    }
+    if (b==1 && a!=1)
+    {
+        enemyModelMatrix = glm::translate(enemyModelMatrix, glm::vec3(0.005f, 0.005f, 0.0f));
+    }
+
+
+    moveZ-=shipSpeed;
+}
 
 float speed_x=0; //obroty kostki w poziomie
 float speed_y=0; //obroty kostki w pionie
@@ -97,19 +149,41 @@ float aspectRatio=1;
 ShaderProgram *sp;
 
 Model spaceship;
+Model Enemy::model;
 
 //Uchwyty na tekstury
 GLuint tex0;
 GLuint tex1;
 
 std::vector<Laser> lasers;
+std::vector<Enemy> enemies;
 glm::mat4 currentShipMatrix;
+
 
 void addLaser() {
     Laser laser;
-    laser.moveZ = -7.0f;
+    laser.moveZ = -2.0f;
     laser.shipModelMatrix = currentShipMatrix;
     lasers.push_back(laser);
+}
+
+//proces dodawania wrogiego statku
+void addEnemy(){
+    Enemy enemy;
+    enemy.moveZ = 10.0f;
+    glm::mat4 Mx=glm::mat4(1.0f);
+    enemy.enemyModelMatrix = Mx;
+    enemies.push_back(enemy);
+}
+
+//procedura która losowo dodaje wrogów
+void addFoes(){
+    int liczba = (rand() % 120)+0;
+    if (liczba==1)
+    {
+        addEnemy();
+    }
+
 }
 
 //Procedura obsługi błędów
@@ -188,6 +262,7 @@ void initOpenGLProgram(GLFWwindow* window) {
     tex1=readTexture("sky.png");
 
     spaceship.loadOBJ("prometheus.obj");
+    Enemy::model.loadOBJ("ufo.obj");
 }
 
 
@@ -323,18 +398,6 @@ void drawScene(GLFWwindow* window,float angle_x,float angle_y, float moveX, floa
 	M=glm::scale(M, glm::vec3(0.15f, 0.15f, 0.15f));
 	currentShipMatrix = M;
 
-	//Kostka
-	/*float *verts=myCubeVertices;
-	float *normals=myCubeNormals;
-	float *texCoords=myCubeTexCoords;
-	unsigned int vertexCount=myCubeVertexCount;*/
-
-	//Czajnik
-	/*float *verts=myTeapotVertices;
-	float *normals=myTeapotVertexNormals;
-	float *texCoords=myTeapotTexCoords;
-	unsigned int vertexCount=myTeapotVertexCount;*/
-
     sp->use();//Aktywacja programu cieniującego
     //Przeslij parametry programu cieniującego do karty graficznej
     glUniformMatrix4fv(sp->u("P"),1,false,glm::value_ptr(P));
@@ -353,23 +416,14 @@ void drawScene(GLFWwindow* window,float angle_x,float angle_y, float moveX, floa
     spaceship.draw(sp);
 
     for(int i=0; i<lasers.size(); i++) {
+        lasers[i].wystrzelenie();
         lasers[i].draw(sp);
     }
 
-    /*glEnableVertexAttribArray(sp->a("vertex"));  //Włącz przesyłanie danych do atrybutu vertex
-    glVertexAttribPointer(sp->a("vertex"),4,GL_FLOAT,false,0,verts); //Wskaż tablicę z danymi dla atrybutu vertex
-
-    glEnableVertexAttribArray(sp->a("normal"));  //Włącz przesyłanie danych do atrybutu normal
-    glVertexAttribPointer(sp->a("normal"),4,GL_FLOAT,false,0,normals); //Wskaż tablicę z danymi dla atrybutu normal
-
-    glEnableVertexAttribArray(sp->a("texCoord0"));  //Włącz przesyłanie danych do atrybutu texCoord0
-    glVertexAttribPointer(sp->a("texCoord0"),2,GL_FLOAT,false,0,texCoords); //Wskaż tablicę z danymi dla atrybutu texCoord0
-
-    glDrawArrays(GL_TRIANGLES,0,vertexCount); //Narysuj obiekt
-
-    glDisableVertexAttribArray(sp->a("vertex"));  //Wyłącz przesyłanie danych do atrybutu vertex
-    glDisableVertexAttribArray(sp->a("normal"));  //Wyłącz przesyłanie danych do atrybutu normal
-    glDisableVertexAttribArray(sp->a("texCoord0"));  //Wyłącz przesyłanie danych do atrybutu texCoord0*/
+     for(int i=0; i<enemies.size(); i++) {
+        enemies[i].coming();
+        enemies[i].draw(sp);
+    }
 
     glfwSwapBuffers(window); //Przerzuć tylny bufor na przedni
 }
@@ -377,13 +431,14 @@ void drawScene(GLFWwindow* window,float angle_x,float angle_y, float moveX, floa
 void petlaGlowna(GLFWwindow* window)
 {
     //Główna pętla
-	float angle_x=0; //Aktualny kąt obrotu obiektu
+	float angle_x=PI; //Aktualny kąt obrotu obiektu
 	float angle_y=0; //Aktualny kąt obrotu obiektu
     float moveX=0;
     float moveY=0;
 	glfwSetTime(0); //Zeruj timer
 	while (!glfwWindowShouldClose(window)) //Tak długo jak okno nie powinno zostać zamknięte
 	{
+        addFoes(); //dodaje wrogów w losowym czasie
         angle_x+=speed_x*glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
         angle_y+=speed_y*glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
         moveX+=speed_moveX*glfwGetTime();
@@ -402,6 +457,8 @@ void petlaGlowna(GLFWwindow* window)
 
 int main(void)
 {
+    srand( time( NULL ) );
+
 	GLFWwindow* window; //Wskaźnik na obiekt reprezentujący okno
 
 	glfwSetErrorCallback(error_callback);//Zarejestruj procedurę obsługi błędów
