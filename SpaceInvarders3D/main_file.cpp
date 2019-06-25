@@ -67,11 +67,17 @@ class Laser {
         glm::mat4 shipModelMatrix;
         void draw(ShaderProgram *sp);
         void wystrzelenie();
+        glm::mat4 getModelMatrix();
 };
 
-void Laser::draw(ShaderProgram *sp) {
+glm::mat4 Laser::getModelMatrix() {
     glm::mat4 Ml = glm::translate(shipModelMatrix, glm::vec3(0.0f, 0.0f, moveZ));
     Ml = glm::scale(Ml, glm::vec3(0.1f, 0.1f, 2.5f));
+    return Ml;
+}
+
+void Laser::draw(ShaderProgram *sp) {
+    glm::mat4 Ml = this -> getModelMatrix();
 
     glUniformMatrix4fv(sp->u("M"),1,false,glm::value_ptr(Ml));
 
@@ -93,7 +99,6 @@ void Laser::draw(ShaderProgram *sp) {
 
 void Laser::wystrzelenie(){
     moveZ-=bulletSpeed;
-
 }
 
 class Enemy{
@@ -104,24 +109,25 @@ class Enemy{
         float shipDirectionMax=0.005f;
         glm::mat4 enemyModelMatrix;
         void draw(ShaderProgram *sp);
-
+        glm::mat4 getModelMatrix();
 
         void coming();
         const static float directionChange=0.005f;
         int direction = (rand()%3)+0; //0 - X , 1-Y, 2-XY
         int sign = (rand()%4)+0; //0,2-plus, 1,3-minus
-
-
-
-
 };
 
-void Enemy::draw(ShaderProgram *sp){
+glm::mat4 Enemy::getModelMatrix() {
     glm::mat4 Menemy = glm::translate(enemyModelMatrix, glm::vec3(0.0f, 0.0f, moveZ));
     Menemy = glm::rotate(Menemy,-PI*0.15f,glm::vec3(1.0f,0.0f,0.0f));
     Menemy = glm::rotate(Menemy,-PI/2,glm::vec3(0.0f,1.0f,0.0f));
     Menemy = glm::rotate(Menemy,-PI/2,glm::vec3(1.0f,0.0f,0.0f));
     Menemy = glm::scale(Menemy, glm::vec3(0.0005f, 0.0005f, 0.0005f));
+    return Menemy;
+}
+
+void Enemy::draw(ShaderProgram *sp){
+    glm::mat4 Menemy = this -> getModelMatrix();
 
     glUniformMatrix4fv(sp->u("M"),1,false,glm::value_ptr(Menemy));
 
@@ -419,6 +425,47 @@ void Model::loadOBJ(const char* path) {
     fclose(file);
 }
 
+bool collision(Laser &l, Enemy &e) {
+    //przenies punkt (0,0,-1) z przestrzeni modelu lasera do przestrzeni swiata
+    glm::vec4 l_point = l.getModelMatrix()*glm::vec4(0,0,-1,1);
+    //przenies ten punkt z przestrzeni swiata do przestrzeni modelu ufo
+    l_point = glm::inverse(e.getModelMatrix())*l_point;
+    /*if(l_point.x > -533.77f && l_point.x < 299.28f &&
+       l_point.y > -544.3f && l_point.y < 544.3f &&
+       l_point.z > -78.28f && l_point.z < 137.44f) return true;*/
+    if(l_point.x > -533.77f && l_point.x < 299.28f &&
+       l_point.y > -544.3f && l_point.y < 544.3f &&
+       l_point.z > -500.0f && l_point.z < 500.0f) return true;
+    return false;
+}
+
+void checkCollisions() {
+    for(int i=0; i<lasers.size(); i++) {
+        for(int j=0; j<enemies.size(); j++) {
+            if(collision(lasers[i], enemies[j])) {
+                lasers.erase(lasers.begin()+i);
+                enemies.erase(enemies.begin()+j);
+                return;
+            }
+        }
+    }
+}
+
+void removeInvisibleObjects() {
+    for(int i=0; i<enemies.size(); i++) {
+        if(enemies[i].moveZ < -5.0f) {
+            enemies.erase(enemies.begin()+i);
+            break;
+        }
+    }
+    for(int i=0; i<lasers.size(); i++) {
+        if(lasers[i].moveZ < -70.0f) {
+            lasers.erase(lasers.begin()+i);
+            break;
+        }
+    }
+}
+
 //Procedura rysująca zawartość sceny
 void drawScene(GLFWwindow* window,float angle_x,float angle_y, float moveX, float moveY) {
 	//************Tutaj umieszczaj kod rysujący obraz******************l
@@ -494,6 +541,8 @@ void petlaGlowna(GLFWwindow* window)
         if(moveY > 2) moveY = 2;
         if(moveY < -2) moveY = -2;
         glfwSetTime(0); //Zeruj timer
+        removeInvisibleObjects();
+        checkCollisions();
 		drawScene(window,angle_x,angle_y, moveX, moveY); //Wykonaj procedurę rysującą
 		glfwPollEvents(); //Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
 	}
