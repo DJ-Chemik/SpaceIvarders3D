@@ -183,8 +183,8 @@ void Enemy::coming(){
     moveZ-=shipSpeed;
 }
 
-float speed_x=0; //obroty kostki w poziomie
-float speed_y=0; //obroty kostki w pionie
+float speed_x=0;
+float speed_y=0;
 float speed_moveX=0;
 float speed_moveY=0;
 
@@ -430,9 +430,6 @@ bool collision(Laser &l, Enemy &e) {
     glm::vec4 l_point = l.getModelMatrix()*glm::vec4(0,0,-1,1);
     //przenies ten punkt z przestrzeni swiata do przestrzeni modelu ufo
     l_point = glm::inverse(e.getModelMatrix())*l_point;
-    /*if(l_point.x > -533.77f && l_point.x < 299.28f &&
-       l_point.y > -544.3f && l_point.y < 544.3f &&
-       l_point.z > -78.28f && l_point.z < 137.44f) return true;*/
     if(l_point.x > -533.77f && l_point.x < 299.28f &&
        l_point.y > -544.3f && l_point.y < 544.3f &&
        l_point.z > -500.0f && l_point.z < 500.0f) return true;
@@ -493,6 +490,7 @@ void drawScene(GLFWwindow* window,float angle_x,float angle_y, float moveX, floa
     glUniformMatrix4fv(sp->u("V"),1,false,glm::value_ptr(V));
     glUniformMatrix4fv(sp->u("M"),1,false,glm::value_ptr(M));
     glUniform4f(sp->u("lp"),0,0,-6,1); //Współrzędne źródła światła
+    glUniform4f(sp->u("lp2"),10,10,5,1); //Współrzędne drugiego źródła światła
 
     glUniform1i(sp->u("textureMap0"),0);
     glActiveTexture(GL_TEXTURE0);
@@ -546,9 +544,7 @@ void petlaGlowna(GLFWwindow* window)
 		drawScene(window,angle_x,angle_y, moveX, moveY); //Wykonaj procedurę rysującą
 		glfwPollEvents(); //Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
 	}
-
 }
-
 
 int main(void)
 {
